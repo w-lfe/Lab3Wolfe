@@ -9,9 +9,6 @@
  */
 
 
-
-
-
 import com.rabbitmq.client.*;
 
 import java.io.IOException;
@@ -20,11 +17,6 @@ import java.nio.charset.StandardCharsets;
 public class GameB {
     private final static String QUEUE_NAME = "game_queue";
 
-    /**
-     *
-     * @param argv
-     * @throws Exception
-     */
     public static void main(String[] argv) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
@@ -37,8 +29,7 @@ public class GameB {
                 String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
                 // Convert received message to game object
                 Game game = Game.fromFlatFile(message);
-                System.out.println("Received game object:");
-                System.out.println(game);
+                System.out.println("Received game object: " + game);
             };
             channel.basicConsume(QUEUE_NAME, true, deliverCallback, consumerTag -> {});
         } catch (IOException e) {
@@ -46,3 +37,5 @@ public class GameB {
         }
     }
 }
+
+

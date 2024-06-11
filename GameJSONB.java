@@ -8,46 +8,43 @@
 
  */
 
-
-
-
-
-import com.rabbitmq.client.*;
-
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpExchange;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 
 public class GameJSONB {
-    private final static String QUEUE_NAME = "game_queue";
+    public static void main(String[] args) throws IOException {
+        HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+        server.createContext("/game", new MyHandler());
+        server.setExecutor(null); // creates a default executor
+        server.start();
+        System.out.println("Server started on port 8080");
+    }
 
-    /**
-     *
-     * @param argv
-     * @throws Exception
-     */
-    public static void main(String[] argv) throws Exception {
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("localhost");
-        ObjectMapper objectMapper = new ObjectMapper();
-        try (Connection connection = factory.newConnection();
-             Channel channel = connection.createChannel()) {
-            channel.queueDeclare(QUEUE_NAME, false, false, false, null);
-            System.out.println("Waiting for game object...");
+    static class MyHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            InputStream is = exchange.getRequestBody();
+            String json = new String(is.readAllBytes());
 
-            DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-                String json = new String(delivery.getBody(), StandardCharsets.UTF_8);
+            ObjectMapper objectMapper = new ObjectMapper();
+            Game game = objectMapper.readValue(json, Game.class);
 
-                Game game = objectMapper.readValue(json, Game.class);
-                System.out.println("Received game object:");
-                System.out.println(game);
-            };
-            channel.basicConsume(QUEUE_NAME, true, deliverCallback, consumerTag -> {
-            });
-        } catch (IOException e) {
-            e.printStackTrace();
+            String response = "Received game object: " + game;
+            exchange.sendResponseHeaders(200, response.length());
+            OutputStream os = exchange.getResponseBody();
+            os.write(response.getBytes());
+            os.close();
+            System.out.println(response);
         }
     }
 }
+
+
 
